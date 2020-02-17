@@ -18,6 +18,13 @@ class sdrImage:
         self.classification = "none"
         self.brighter = None
         self.darker = None
+        self.displacement = (0, 0)
+
+    def __str__(self):
+        out = "Appropriate: " + str(self.appr_count) + "\n"
+        out += "Blacked out: " + str(self.blk_count) + "\n"
+        out += "Saturated: " + str(self.sat_count) + "\n"
+        return out
 
 
 def trinarize(sdrimage):
@@ -50,42 +57,107 @@ def cvt_trinarized2grayscale(tri):
 
 def binarize(sdrimage):
     tri = sdrimage.trinarized
-    bin = sdrimage.binarized
+    bi = sdrimage.binarized
     classification = sdrimage.classification
     for x in range(0, tri.shape[0]):
         for y in range(0, tri.shape[1]):
             if classification == "ref":
                 if tri[x][y] == 1:
-                    bin[x][y] == 1
+                    bi[x][y] == 1
                 else:
-                    bin[x][y] == 0
+                    bi[x][y] == 0
             elif classification == "blackedout":
                 if tri[x][y] == 0:
-                    bin[x][y] == 1
+                    bi[x][y] == 1
                 else:
-                    bin[x][y] == 0
-            else:
+                    bi[x][y] == 0
+            elif classification == "saturated":
                 if tri[x][y] == 2:
-                    bin[x][y] == 1
+                    bi[x][y] == 1
                 else:
-                    bin[x][y] == 0
+                    bi[x][y] == 0
 
 
-def cvt_binarized2grayscale(bin):
-    grayimg = np.zeros(bin.shape, dtype=np.uint8)
-    for x in range(0, bin.shape[0]):
-        for y in range(0, bin.shape[1]):
-            if bin[x][y] == 0:
-                grayimg[x][y] = 0
+def cvt_binarized2grayscale(bi):
+    grayimg = np.zeros(bi.shape, dtype=np.uint8)
+    for x in range(0, bi.shape[0]):
+        for y in range(0, bi.shape[1]):
+            if bi[x][y] == 0:
+                grayimg[x][y] = 70
             else:
-                grayimg[x][y] = 1
+                print("HELLO")
+                grayimg[x][y] = 180
     return grayimg
 
 
-def ex_superHDR(sdr_series):
-    ref = sdr_series[0]
-    for sdr_image in sdr_series:
-        trinarize(sdr_image)
-        if sdr_image.appr_count > ref.appr_count:
-            ref = sdr_image
-    return sdr_image
+def sort_into_chain(ref, sdrimage):
+    if sdrimage.blk_count > ref.blk_count:
+        sdrimage.classification = "blackedout"
+        if ref.darker is None:
+            ref.darker = sdrimage
+            sdrimage.brighter = ref
+        else:
+            darker = ref.darker
+            if darker.blk_count >= sdrimage.blk_count:
+                sdrimage.brighter = ref
+                sdrimage.darker = darker
+                darker.brighter = sdrimage
+                ref.darker = sdrimage
+            else:
+                sort_into_chain(darker, sdrimage)
+    elif sdrimage.sat_count > ref.sat_count:
+        sdrimage.classification = "saturated"
+        if ref.brighter is None:
+            ref.brighter = sdrimage
+            sdrimage.darker = ref
+        else:
+            brighter = ref.brighter
+            if brighter.sat_count >= sdrimage.sat_count:
+                sdrimage.darker = ref
+                sdrimage.brighter = brighter
+                brighter.darker = sdrimage
+                ref.brighter = sdrimage
+            else:
+                sort_into_chain(brighter, sdrimage)
+
+
+def convert_sdr2hdr(sdr_series):
+    # CLASSIFIYING INTO EITHER BLACKET OUT, REFERENCE OR SATURATED
+    ref = ex_classification(sdr_series)
+
+    # for i in range(0, len(sdr_series)):
+    #     cv2.imshow("img" + str(i), cvt_trinarized2grayscale(sdr_series[i].trinarized))
+    #     if ref == sdr_series[i]:
+    #         print("FOUND", i)
+    #     print(i, sdr_series[i].appr_count)
+
+
+
+
+
+def ex_classification(sdr_series):
+    ref = sdr_series[1]
+    for sdrimage in sdr_series:
+        trinarize(sdrimage)
+        if sdrimage.appr_count > ref.appr_count:
+            ref = sdrimage
+    ref.classification = "ref"
+    for sdrimage in sdr_series:
+        sort_into_chain(ref, sdrimage)
+        binarize(sdrimage)
+    cv2.imshow("reference tri", cvt_trinarized2grayscale(ref.trinarized))
+    cv2.imshow("reference bin", cvt_binarized2grayscale(ref.binarized))
+    return ref
+
+
+    # print("SORTED")
+    # out = str(ref)
+    # darker = ref.darker
+    # while darker is not None:
+    #     out = str(darker) + out
+    #     darker = darker.darker
+    # brighter = ref.brighter
+    # while brighter is not None:
+    #     out += str(brighter)
+    #     brighter = brighter.brighter
+    # print(out)
