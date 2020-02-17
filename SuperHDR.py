@@ -63,19 +63,13 @@ def binarize(sdrimage):
         for y in range(0, tri.shape[1]):
             if classification == "ref":
                 if tri[x][y] == 1:
-                    bi[x][y] == 1
-                else:
-                    bi[x][y] == 0
+                    bi[x][y] = 1
             elif classification == "blackedout":
                 if tri[x][y] == 0:
-                    bi[x][y] == 1
-                else:
-                    bi[x][y] == 0
+                    bi[x][y] = 1
             elif classification == "saturated":
                 if tri[x][y] == 2:
-                    bi[x][y] == 1
-                else:
-                    bi[x][y] == 0
+                    bi[x][y] = 1
 
 
 def cvt_binarized2grayscale(bi):
@@ -85,7 +79,6 @@ def cvt_binarized2grayscale(bi):
             if bi[x][y] == 0:
                 grayimg[x][y] = 70
             else:
-                print("HELLO")
                 grayimg[x][y] = 180
     return grayimg
 
@@ -124,6 +117,9 @@ def sort_into_chain(ref, sdrimage):
 def convert_sdr2hdr(sdr_series):
     # CLASSIFIYING INTO EITHER BLACKET OUT, REFERENCE OR SATURATED
     ref = ex_classification(sdr_series)
+    hdr = ex_merging(ref)
+    cv2.imshow("reference", cv2.cvtColor(ref.image, cv2.COLOR_HSV2BGR))
+    cv2.imshow("hdr", cv2.cvtColor(hdr, cv2.COLOR_HSV2BGR))
 
     # for i in range(0, len(sdr_series)):
     #     cv2.imshow("img" + str(i), cvt_trinarized2grayscale(sdr_series[i].trinarized))
@@ -138,6 +134,7 @@ def convert_sdr2hdr(sdr_series):
 def ex_classification(sdr_series):
     ref = sdr_series[1]
     for sdrimage in sdr_series:
+
         trinarize(sdrimage)
         if sdrimage.appr_count > ref.appr_count:
             ref = sdrimage
@@ -145,10 +142,52 @@ def ex_classification(sdr_series):
     for sdrimage in sdr_series:
         sort_into_chain(ref, sdrimage)
         binarize(sdrimage)
-    cv2.imshow("reference tri", cvt_trinarized2grayscale(ref.trinarized))
-    cv2.imshow("reference bin", cvt_binarized2grayscale(ref.binarized))
+        print("HELLO")
+    # cv2.imshow("reference tri", cvt_trinarized2grayscale(ref.trinarized))
+    # cv2.imshow("reference bin", cvt_binarized2grayscale(ref.binarized))
+    # cv2.imshow("darker tri", cvt_trinarized2grayscale(ref.darker.trinarized))
+    # cv2.imshow("darker bin", cvt_binarized2grayscale(ref.darker.binarized))
+    # cv2.imshow("brighter tri", cvt_trinarized2grayscale(ref.brighter.trinarized))
+    # cv2.imshow("brighter bin", cvt_binarized2grayscale(ref.brighter.binarized))
     return ref
 
+
+def ex_merging(ref):
+    hdrimage = np.zeros(ref.image.shape, dtype=np.uint8)
+    for x in range(0, ref.image.shape[0]):
+        for y in range(0, ref.image.shape[1]):
+            # print("HELLO")
+            temp_image = ref
+            found = False
+            while not found:
+                if temp_image.trinarized[x][y] == 2:
+                    if temp_image.darker is not None:
+                        if temp_image.darker.trinarized[x][y] == 1:
+                            hdrimage[x][y][:] = temp_image.darker.image[x][y][:]
+                            print("Darker found")
+                            found = True
+                        else:
+                            temp_image = temp_image.darker
+                    else:
+                        hdrimage[x][y][:] = temp_image.image[x][y][:]
+                        print("Darker found")
+                        found = True
+                elif temp_image.trinarized[x][y] == 0:
+                    if temp_image.brighter is not None:
+                        if temp_image.brighter.trinarized[x][y] == 1:
+                            hdrimage[x][y][:] = temp_image.brighter.image[x][y][:]
+                            print("Lighter found")
+                            found = True
+                        else:
+                            temp_image = temp_image.brighter
+                    else:
+                        hdrimage[x][y][:] = temp_image.image[x][y][:]
+                        print("Lighter found")
+                        found = True
+                else:
+                    found = True
+    print("HELLO")
+    return hdrimage
 
     # print("SORTED")
     # out = str(ref)
