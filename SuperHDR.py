@@ -19,6 +19,8 @@ class sdrImage:
         self.brighter = None
         self.darker = None
         self.displacement = (0, 0)
+        self.sat_threshold = 255
+        self.blk_threshold = 0
 
     def __str__(self):
         out = "Appropriate: " + str(self.appr_count) + "\n"
@@ -31,10 +33,10 @@ def trinarize(sdrimage):
     image = sdrimage.image
     for x in range(0, image.shape[0]):
         for y in range(0, image.shape[1]):
-            if image[x][y][2] > sat_threshold:
+            if image[x][y][2] > sdrimage.sat_threshold:
                 sdrimage.trinarized[x][y] = 2
                 sdrimage.sat_count += 1
-            elif image[x][y][2] < blk_threshold:
+            elif image[x][y][2] < sdrimage.blk_threshold:
                 sdrimage.trinarized[x][y] = 0
                 sdrimage.blk_count += 1
             else:
@@ -116,6 +118,7 @@ def sort_into_chain(ref, sdrimage):
 
 def convert_sdr2hdr(sdr_series):
     # CLASSIFIYING INTO EITHER BLACKET OUT, REFERENCE OR SATURATED
+    ex_prepro(sdr_series)
     ref = ex_classification(sdr_series)
     hdr = ex_merging(ref)
     cv2.imshow("reference", cv2.cvtColor(ref.image, cv2.COLOR_HSV2BGR))
@@ -128,7 +131,22 @@ def convert_sdr2hdr(sdr_series):
     #     print(i, sdr_series[i].appr_count)
 
 
-
+def ex_prepro(sdr_series):
+    zmax = 0
+    min_zmax = 255
+    for sdrimage in sdr_series:
+        temp_zmax = np.max(sdrimage.image[:, :, 1])
+        print(temp_zmax)
+        sdrimage.sat_threshold = 0.9 * temp_zmax
+        if temp_zmax > zmax:
+            zmax = temp_zmax
+        if temp_zmax < min_zmax:
+            min_zmax = temp_zmax
+    max_zmin = 0.9 * min_zmax
+    ratio = max_zmin / zmax
+    for sdrimage in sdr_series:
+        sdrimage.blk_threshold = ratio * sdrimage.sat_threshold
+        print(sdrimage.sat_threshold, sdrimage.blk_threshold)
 
 
 def ex_classification(sdr_series):
@@ -153,40 +171,41 @@ def ex_classification(sdr_series):
 
 
 def ex_merging(ref):
-    hdrimage = np.zeros(ref.image.shape, dtype=np.uint8)
+    hdrimage = np.ones(ref.image.shape, dtype=np.uint8)
     for x in range(0, ref.image.shape[0]):
         for y in range(0, ref.image.shape[1]):
-            # print("HELLO")
             temp_image = ref
             found = False
-            while not found:
-                if temp_image.trinarized[x][y] == 2:
+            # print(x , y)
+            if temp_image.trinarized[x][y] == 2:
+                while not found:
                     if temp_image.darker is not None:
                         if temp_image.darker.trinarized[x][y] == 1:
                             hdrimage[x][y][:] = temp_image.darker.image[x][y][:]
-                            print("Darker found")
+                            # print("Darker found")
                             found = True
                         else:
                             temp_image = temp_image.darker
                     else:
                         hdrimage[x][y][:] = temp_image.image[x][y][:]
-                        print("Darker found")
+                        # print("Darker found")
                         found = True
-                elif temp_image.trinarized[x][y] == 0:
+            elif temp_image.trinarized[x][y] == 0:
+                while not found:
                     if temp_image.brighter is not None:
                         if temp_image.brighter.trinarized[x][y] == 1:
                             hdrimage[x][y][:] = temp_image.brighter.image[x][y][:]
-                            print("Lighter found")
+                            # print("Lighter found")
                             found = True
                         else:
                             temp_image = temp_image.brighter
                     else:
                         hdrimage[x][y][:] = temp_image.image[x][y][:]
-                        print("Lighter found")
+                        # print("Lighter found")
                         found = True
-                else:
-                    found = True
-    print("HELLO")
+            else:
+                hdrimage[x][y][:] = temp_image.image[x][y][:]
+    print("DONE")
     return hdrimage
 
     # print("SORTED")
@@ -200,3 +219,5 @@ def ex_merging(ref):
     #     out += str(brighter)
     #     brighter = brighter.brighter
     # print(out)
+
+
