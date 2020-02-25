@@ -3,29 +3,54 @@ import numpy as np
 from SuperHDR_aux import *
 
 
-class sdrImage:
-    def __init__(self, image):
-        self.image = image
-        self.image = cv2.cvtColor(image, cv2.COLOR_BGR2HLS)
-        self.luminance = image[:,:,1]
-        self.trinarized = np.zeros(image[:,:,1].shape, dtype=np.uint8)
+def preprocess(sdr_series):
+    ref = sdr_series[0]
+    for sdr_image in sdr_series:
+        count_pixels(sdr_image)
+        if ref.pixels_appr < sdr_image.pixels_appr:
+            ref = sdr_image
+    for sdr_image in sdr_series:
+        sort_into_chain(ref, sdr_image)
+    # temp = ref
+    # output = str(ref)
+    # while temp.darker is not None:
+    #     output = str(temp.darker) + output
+    #     temp = temp.darker
+    # temp = ref
+    # while temp.brighter is not None:
+    #     output += str(temp.brighter)
+    #     temp = temp.brighter
+    # print(output)
+    return ref
 
 
-im01 = sdrImage(cv2.imread("Parliament/test1.png", cv2.IMREAD_COLOR))
-im02 = sdrImage(cv2.imread("Parliament/test2.png", cv2.IMREAD_COLOR))
-# im01 = sdrImage(cv2.imread("Parliament/The Parliament - ppw - 04.png", cv2.IMREAD_COLOR))
-# im02 = sdrImage(cv2.imread("Parliament/The Parliament - ppw - 05.png", cv2.IMREAD_COLOR))
+def normalize_luminance(sdr_series, ref):
+    for sdr_image in sdr_series:
+        if sdr_image != ref:
+            adjust_exposure(sdr_image, ref.image)
+            # sdr_image.image[:,:,1] = sdr_image.luminance
 
-cv2.imshow("01 before", im01.luminance)
-adjust_exposure(im01, im02.image)
-trinarize(im01)
-trinarize(im02)
 
-cv2.imshow("01", trinarize_vis(im01.trinarized))
-cv2.imshow("02", trinarize_vis(im02.trinarized))
-cv2.imshow("diff", difference_mask_vis(im01, im02))
+def align_images_to_ref(sdr_series, ref):
+    trinarize(ref)
+    for sdr_image in sdr_series:
+        if sdr_image != ref:
+            trinarize(sdr_image)
+            sdr_image.displacement = align_image(sdr_image.trinarized, ref.trinarized)
+            print(sdr_image.displacement)
 
-align_image(im01.trinarized, im02.trinarized)
+
+def sdr_series_to_hdr(sdr_series):
+    ref = preprocess(sdr_series)
+    # cv2.imshow("ref", cv2.cvtColor(ref.image, cv2.COLOR_HLS2BGR))
+    normalize_luminance(sdr_series, ref)
+    align_images_to_ref(sdr_series, ref)
+    hdr = merging(ref)
+    cv2.imshow("hdr", cv2.cvtColor(hdr, cv2.COLOR_HLS2BGR))
+
+
+sdr_series = import_series("parliament2")
+sdr_series_to_hdr(sdr_series)
 
 
 cv2.waitKey(0)

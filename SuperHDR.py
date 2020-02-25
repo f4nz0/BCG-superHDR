@@ -3,8 +3,8 @@ import numpy as np
 
 # image sources http://hdr-photographer.com/hdr-photos-to-play-with/
 
-sat_threshold = 220
-blk_threshold = 40
+sat_threshold = 200
+blk_threshold = 60
 
 class sdrImage:
     def __init__(self, im):
@@ -33,10 +33,10 @@ def trinarize(sdrimage):
     image = sdrimage.image
     for x in range(0, image.shape[0]):
         for y in range(0, image.shape[1]):
-            if image[x][y][2] > sdrimage.sat_threshold:
+            if image[x][y][2] > sat_threshold:
                 sdrimage.trinarized[x][y] = 2
                 sdrimage.sat_count += 1
-            elif image[x][y][2] < sdrimage.blk_threshold:
+            elif image[x][y][2] < blk_threshold:
                 sdrimage.trinarized[x][y] = 0
                 sdrimage.blk_count += 1
             else:
