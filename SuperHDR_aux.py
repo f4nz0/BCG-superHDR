@@ -53,14 +53,16 @@ def count_pixels(sdrimage):
 
 def trinarize_vis(tri):
     grayscale = np.zeros(tri.shape, dtype=np.uint8)
-    grayscale[tri == 2] = 180
+    grayscale[tri == 2] = 230
     grayscale[tri == 1] = 120
-    grayscale[tri == 0] = 60
+    grayscale[tri == 0] = 40
     return grayscale
 
 
 def difference_mask(tri01, tri02):
-    error = (tri01 != tri02).sum()
+    ignore_pixels = tri01[tri01 == 3].sum() / 3
+    error = (tri01 != tri02).sum() - ignore_pixels
+    # print(error)
     return error
 
 
@@ -116,7 +118,7 @@ def align(image_tri, ref_tri, displacement=(0, 0), previous_displacement=False):
     for x in range(ranges[0][0],ranges[0][1]):
         for y in range(ranges[1][0],ranges[1][1]):
             # print(x, y)
-            alignment = np.zeros(ref_tri.shape, dtype=np.uint8) -1
+            alignment = np.zeros(ref_tri.shape, dtype=np.uint8) + 3
             if x < 0:
                 align_x = (0, alignment.shape[0] + x)
                 image_x = (-x, image_tri.shape[0])
@@ -168,63 +170,71 @@ def sort_into_chain(ref, sdr_image):
             else:
                 sort_into_chain(brighter, sdr_image)
 
+def replace(image, ref):
+    for x in range(0, image.shape[0]):
+        for y in range(0, image.shape[1]):
+            if image[x][y][:].sum() == 0:
+                image[x][y][:] = ref.image[x][y][:]
+    return image
 
 def merging(ref):
-    hdrimage = np.ones(ref.image.shape, dtype=np.uint8)
-    for x in range(0, ref.image.shape[0]):
-        for y in range(0, ref.image.shape[1]):
-            temp_image = ref
+    hdrimage = ref.image.copy()
+    # hdrimage = np.zeros(ref.image.shape, dtype=np.uint8)
+    for x in range(0, hdrimage.shape[0]):
+        for y in range(0, hdrimage.shape[1]):
+            temp = ref
             found = False
-            # print(x , y)
             depth_counter = 0
-            if temp_image.trinarized[x][y] == 2:
+            if ref.trinarized[x][y] == 2:
+                # print("replacing", x, y)
                 while not found:
-                    if temp_image.darker is not None:
+                    if temp.darker is not None:
                         depth_counter += 1
-                        if temp_image.darker.trinarized[x][y] == 1:
-                            temp_x = x + temp_image.displacement[0]
-                            temp_y = y + temp_image.displacement[1]
-                            if temp_image.image.shape[0] > temp_x > 0 and temp_image.image.shape[1] > temp_y > 0:
-                                hdrimage[x][y][:] = temp_image.darker.image[temp_x][temp_y][:]
-                                # print("Darker found")
+                        displ = temp.darker.displacement
+                        new_x = x - displ[0]
+                        new_y = y - displ[1]
+                        if temp.darker.image.shape[0] > new_x > 0 and temp.darker.image.shape[1] > new_y > 0:
+                            if temp.darker.trinarized[new_x][new_y] == 1:
+                                hdrimage[x][y][:] = merge_pixels(hdrimage[x][y][:], temp.darker.image[new_x][new_y][:], depth_counter)
                                 found = True
+                                # print("replaced")
                             else:
-                                temp_image = temp_image.darker
+                                hdrimage[x][y][:] = merge_pixels(hdrimage[x][y][:], temp.darker.image[new_x][new_y][:], depth_counter)
+
+                                temp = temp.darker
                         else:
-                            temp_image = temp_image.darker
+                            temp = temp.darker
                     else:
-                        temp_x = x + temp_image.displacement[0]
-                        temp_y = y + temp_image.displacement[1]
-                        if temp_image.image.shape[0] > temp_x > 0 and temp_image.image.shape[1] > temp_y > 0:
-                            hdrimage[x][y][:] = temp_image.image[temp_x][temp_y][:]
-                            # print("Darker found")
-                            found = True
-            elif temp_image.trinarized[x][y] == 0:
+                        found = True
+            elif ref.trinarized[x][y] == 0:
                 while not found:
-                    if temp_image.brighter is not None:
+                    if temp.brighter is not None:
                         depth_counter += 1
-                        if temp_image.brighter.trinarized[x][y] == 1:
-                            temp_x = x + temp_image.displacement[0]
-                            temp_y = y + temp_image.displacement[1]
-                            if temp_image.image.shape[0] > temp_x > 0 and temp_image.image.shape[1] > temp_y > 0:
-                                hdrimage[x][y][:] = temp_image.brighter.image[temp_x][temp_y][:]
-                                # print("Brighter found")
+                        displ = temp.brighter.displacement
+                        new_x = x - displ[0]
+                        new_y = y - displ[1]
+                        if temp.brighter.image.shape[0] > new_x > 0 and temp.brighter.image.shape[1] > new_y > 0:
+                            if temp.brighter.trinarized[new_x][new_y] == 1:
+                                hdrimage[x][y][:] = merge_pixels(hdrimage[x][y][:],
+                                                                 temp.brighter.image[new_x][new_y][:],
+                                                                 depth_counter)
                                 found = True
+                                # print("replaced")
                             else:
-                                temp_image = temp_image.brighter
+                                hdrimage[x][y][:] = merge_pixels(hdrimage[x][y][:],temp.brighter.image[new_x][new_y][:],depth_counter)
+                                temp = temp.brighter
                         else:
-                            temp_image = temp_image.brighter
+                            temp = temp.brighter
                     else:
-                        temp_x = x + temp_image.displacement[0]
-                        temp_y = y + temp_image.displacement[1]
-                        if temp_image.image.shape[0] > temp_x > 0 and temp_image.image.shape[1] > temp_y > 0:
-                            hdrimage[x][y][:] = temp_image.image[temp_x][temp_y][:]
-                            # print("Brighter found")
-                            found = True
-            else:
-                hdrimage[x][y][:] = temp_image.image[x][y][:]
-    print("DONE")
+                        found = True
+    # hdrimage = cv2.blur(hdrimage, (2, 2))
+    # hdrimage = replace(hdrimage, ref)
+    # hdrimage = np.ndarray.astype(hdrimage, dtype=np.uint8)
     return hdrimage
+
+
+def merge_pixels(pixel, new_pixel, weight):
+    return (pixel * (1 - (1 / weight))) + (new_pixel * (1/weight))
 
 
 def import_series(name):
@@ -242,8 +252,40 @@ def import_series(name):
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/03.png", cv2.IMREAD_COLOR)))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/04.png", cv2.IMREAD_COLOR)))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/05.png", cv2.IMREAD_COLOR)))
-        # sdr_series.append(sdrImage(cv2.imread("Parliament_moved/06.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("Parliament_moved/06.png", cv2.IMREAD_COLOR)))
     elif name == "test":
         sdr_series.append(sdrImage(cv2.imread("Parliament/test1c.png", cv2.IMREAD_COLOR)))
         sdr_series.append(sdrImage(cv2.imread("Parliament/test2.png", cv2.IMREAD_COLOR)))
+    elif name == "opencv_test_set":
+        sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial00.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial01.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial02.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial03.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial04.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial05.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial06.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial07.png", cv2.IMREAD_COLOR)))
+        # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial08.png", cv2.IMREAD_COLOR)))
+        # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial09.png", cv2.IMREAD_COLOR)))
+        # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial10.png", cv2.IMREAD_COLOR)))
+        # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial11.png", cv2.IMREAD_COLOR)))
+        # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial12.png", cv2.IMREAD_COLOR)))
+        # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial13.png", cv2.IMREAD_COLOR)))
+        # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial14.png", cv2.IMREAD_COLOR)))
+        # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial15.png", cv2.IMREAD_COLOR)))
+    elif name == "royal_palace":
+        sdr_series.append(sdrImage(cv2.imread("Royal_Palace_in_Madrid/IMG_1335.jpg", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("Royal_Palace_in_Madrid/IMG_1336.jpg", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("Royal_Palace_in_Madrid/IMG_1337.jpg", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("Royal_Palace_in_Madrid/IMG_1338.jpg", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("Royal_Palace_in_Madrid/IMG_1339.jpg", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("Royal_Palace_in_Madrid/IMG_1340.jpg", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("Royal_Palace_in_Madrid/IMG_1341.jpg", cv2.IMREAD_COLOR)))
+    elif name == "shdr_1":
+        sdr_series.append(sdrImage(cv2.imread("shdr_1/shdr_1a.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("shdr_1/shdr_1b.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("shdr_1/shdr_1c.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("shdr_1/shdr_1d.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("shdr_1/shdr_1e.png", cv2.IMREAD_COLOR)))
+        sdr_series.append(sdrImage(cv2.imread("shdr_1/shdr_1f.png", cv2.IMREAD_COLOR)))
     return sdr_series

@@ -33,6 +33,7 @@ def normalize_luminance(sdr_series, ref):
 
 def align_images_to_ref(sdr_series, ref):
     trinarize(ref)
+    cv2.imshow("ref tri", trinarize_vis(ref.trinarized))
     for sdr_image in sdr_series:
         if sdr_image != ref:
             trinarize(sdr_image)
@@ -47,9 +48,12 @@ def sdr_series_to_hdr(sdr_series):
     align_images_to_ref(sdr_series, ref)
     hdr = merging(ref)
     cv2.imshow("hdr", cv2.cvtColor(hdr, cv2.COLOR_HLS2BGR))
+    cv2.imshow("ref", cv2.cvtColor(ref.image, cv2.COLOR_HLS2BGR))
+    # diff = (hdr != ref.image) * 120
+    # cv2.imshow("diff", diff)
 
 
-sdr_series = import_series("parliament2")
+sdr_series = import_series("opencv_test_set")
 sdr_series_to_hdr(sdr_series)
 
 
