@@ -170,12 +170,14 @@ def sort_into_chain(ref, sdr_image):
             else:
                 sort_into_chain(brighter, sdr_image)
 
+
 def replace(image, ref):
     for x in range(0, image.shape[0]):
         for y in range(0, image.shape[1]):
             if image[x][y][:].sum() == 0:
                 image[x][y][:] = ref.image[x][y][:]
     return image
+
 
 def merging(ref):
     hdrimage = ref.image.copy()
