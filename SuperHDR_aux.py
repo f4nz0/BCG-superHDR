@@ -223,6 +223,7 @@ def merging(ref):
                 hdrimage[x][y][:] = inv_crf(ref.image[x][y][:], 0, 0)
     return hdrimage
 
+
 # Calculates the inverse Camera Response Function for an irradiance value (pixel value).
 # Takes the relation between the exposure of the reference pixel and the new pixel and shifts the radiance
 # of the new pixel, so that it aligns with the reference
@@ -239,28 +240,29 @@ def inv_crf(pixel, exposure_image, exposure_ref):
     exposure_values[exposure_values < -0] = 0
     return exposure_values
 
+
 # Easy importing of all the images that were used in this project
 def import_series(name):
     sdr_series = []
-    if name == "parliament":
+    if name == "parliament": # resource: https://farbspiel-photo.com/learn/hdr-pics-to-play-with/hdr-pics-to-play-with-the-parliament
         sdr_series.append(sdrImage(cv2.imread("Parliament/The Parliament - ppw - 01.png", cv2.IMREAD_COLOR), -3))
         sdr_series.append(sdrImage(cv2.imread("Parliament/The Parliament - ppw - 02.png", cv2.IMREAD_COLOR), -2))
         sdr_series.append(sdrImage(cv2.imread("Parliament/The Parliament - ppw - 03.png", cv2.IMREAD_COLOR), -1))
         sdr_series.append(sdrImage(cv2.imread("Parliament/The Parliament - ppw - 04.png", cv2.IMREAD_COLOR), 0))
         sdr_series.append(sdrImage(cv2.imread("Parliament/The Parliament - ppw - 05.png", cv2.IMREAD_COLOR), 1))
         sdr_series.append(sdrImage(cv2.imread("Parliament/The Parliament - ppw - 06.png", cv2.IMREAD_COLOR), 2))
-    elif name == "own_street":
-        # sdr_series.append(sdrImage(cv2.imread("own/mini/street_0.JPG", cv2.IMREAD_COLOR), -6))
-        # sdr_series.append(sdrImage(cv2.imread("own/mini/street_1.JPG", cv2.IMREAD_COLOR), -5))
-        sdr_series.append(sdrImage(cv2.imread("own/street_2.JPG", cv2.IMREAD_COLOR), -4))
-        sdr_series.append(sdrImage(cv2.imread("own/street_3.JPG", cv2.IMREAD_COLOR), -3))
+    elif name == "own_street": # Photos were captured by us!
+        # sdr_series.append(sdrImage(cv2.imread("own/street_0.JPG", cv2.IMREAD_COLOR), -6))
+        # sdr_series.append(sdrImage(cv2.imread("own/street_1.JPG", cv2.IMREAD_COLOR), -5))
+        # sdr_series.append(sdrImage(cv2.imread("own/street_2.JPG", cv2.IMREAD_COLOR), -4))
+        # sdr_series.append(sdrImage(cv2.imread("own/street_3.JPG", cv2.IMREAD_COLOR), -3))
         sdr_series.append(sdrImage(cv2.imread("own/street_4.JPG", cv2.IMREAD_COLOR), -2))
         sdr_series.append(sdrImage(cv2.imread("own/street_5.JPG", cv2.IMREAD_COLOR), -1))
         sdr_series.append(sdrImage(cv2.imread("own/street_6.JPG", cv2.IMREAD_COLOR), 0))
         sdr_series.append(sdrImage(cv2.imread("own/street_7.JPG", cv2.IMREAD_COLOR), 1))
         sdr_series.append(sdrImage(cv2.imread("own/street_8.JPG", cv2.IMREAD_COLOR), 2))
-        sdr_series.append(sdrImage(cv2.imread("own/street_9.JPG", cv2.IMREAD_COLOR), 3))
-    elif name == "own_statue":
+        # sdr_series.append(sdrImage(cv2.imread("own/street_9.JPG", cv2.IMREAD_COLOR), 3))
+    elif name == "own_statue": # Photos were captured by us!
         # sdr_series.append(sdrImage(cv2.imread("own/statue_0.JPG", cv2.IMREAD_COLOR), -6))
         # sdr_series.append(sdrImage(cv2.imread("own/statue_1.JPG", cv2.IMREAD_COLOR), -5))
         sdr_series.append(sdrImage(cv2.imread("own/statue_2.JPG", cv2.IMREAD_COLOR), -4))
@@ -271,7 +273,7 @@ def import_series(name):
         sdr_series.append(sdrImage(cv2.imread("own/statue_7.JPG", cv2.IMREAD_COLOR), 1))
         sdr_series.append(sdrImage(cv2.imread("own/statue_8.JPG", cv2.IMREAD_COLOR), 2))
         sdr_series.append(sdrImage(cv2.imread("own/statue_9.JPG", cv2.IMREAD_COLOR), 3))
-    elif name == "own_street_moved":
+    elif name == "own_street_moved": # Photos were captured by us!
         # sdr_series.append(sdrImage(cv2.imread("own/street2 (1).JPG", cv2.IMREAD_COLOR), -5))
         # sdr_series.append(sdrImage(cv2.imread("own/street2 (2).JPG", cv2.IMREAD_COLOR), -4))
         # sdr_series.append(sdrImage(cv2.imread("own/street2 (3).JPG", cv2.IMREAD_COLOR), -3))
@@ -281,7 +283,7 @@ def import_series(name):
         sdr_series.append(sdrImage(cv2.imread("own/street2 (7).JPG", cv2.IMREAD_COLOR), 1))
         sdr_series.append(sdrImage(cv2.imread("own/street2 (8).JPG", cv2.IMREAD_COLOR), 2))
         # sdr_series.append(sdrImage(cv2.imread("own/street2 (9).JPG", cv2.IMREAD_COLOR), 3))
-    elif name == "own_street_moved_enhanced":
+    elif name == "own_street_moved_enhanced": # Photos were captured by us!
         # sdr_series.append(sdrImage(cv2.imread("own/street2b (1).JPG", cv2.IMREAD_COLOR), -5))
         # sdr_series.append(sdrImage(cv2.imread("own/street2b (2).JPG", cv2.IMREAD_COLOR), -4))
         # sdr_series.append(sdrImage(cv2.imread("own/street2b (3).JPG", cv2.IMREAD_COLOR), -3))
@@ -291,7 +293,7 @@ def import_series(name):
         # sdr_series.append(sdrImage(cv2.imread("own/street2b (7).JPG", cv2.IMREAD_COLOR), 1))
         sdr_series.append(sdrImage(cv2.imread("own/street2b (8).JPG", cv2.IMREAD_COLOR), 2))
         # sdr_series.append(sdrImage(cv2.imread("own/street2b (9).JPG", cv2.IMREAD_COLOR), 3))
-    elif name == "own_street_moved_mini":
+    elif name == "own_street_moved_mini": # Photos were captured by us!
         # sdr_series.append(sdrImage(cv2.imread("own/mini/street2b (1).JPG", cv2.IMREAD_COLOR), -5))
         # sdr_series.append(sdrImage(cv2.imread("own/mini/street2b (2).JPG", cv2.IMREAD_COLOR), -4))
         # sdr_series.append(sdrImage(cv2.imread("own/mini/street2b (3).JPG", cv2.IMREAD_COLOR), -3))
@@ -301,21 +303,21 @@ def import_series(name):
         # sdr_series.append(sdrImage(cv2.imread("own/mini/street2b (7).JPG", cv2.IMREAD_COLOR), 1))
         sdr_series.append(sdrImage(cv2.imread("own/mini/street2b (8).JPG", cv2.IMREAD_COLOR), 2))
         sdr_series.append(sdrImage(cv2.imread("own/mini/street2b (9).JPG", cv2.IMREAD_COLOR), 3))
-    elif name == "parliament2":
+    elif name == "parliament2": # resource: https://farbspiel-photo.com/learn/hdr-pics-to-play-with/hdr-pics-to-play-with-the-parliament
         # sdr_series.append(sdrImage(cv2.imread("Parliament_moved/01.png", cv2.IMREAD_COLOR), -3))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/02.png", cv2.IMREAD_COLOR),-2))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/03.png", cv2.IMREAD_COLOR),-1))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/04.png", cv2.IMREAD_COLOR),0))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/05.png", cv2.IMREAD_COLOR),1))
         # sdr_series.append(sdrImage(cv2.imread("Parliament_moved/06.png", cv2.IMREAD_COLOR),2))
-    elif name == "parliament2mini":
+    elif name == "parliament2mini": # resource: https://farbspiel-photo.com/learn/hdr-pics-to-play-with/hdr-pics-to-play-with-the-parliament
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/mini/01.png", cv2.IMREAD_COLOR),-3))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/mini/02.png", cv2.IMREAD_COLOR),-2))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/mini/03.png", cv2.IMREAD_COLOR),-1))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/mini/04.png", cv2.IMREAD_COLOR),0))
         sdr_series.append(sdrImage(cv2.imread("Parliament_moved/mini/05.png", cv2.IMREAD_COLOR),1))
         # sdr_series.append(sdrImage(cv2.imread("Parliament_moved/mini/06.png", cv2.IMREAD_COLOR),2))
-    elif name == "opencv_test_set":
+    elif name == "opencv_test_set": # resource: https://github.com/opencv/opencv_extra/tree/3.4/testdata/cv/hdr/exposures
         sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial00.png", cv2.IMREAD_COLOR), 2))
         sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial01.png", cv2.IMREAD_COLOR), 1))
         sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial02.png", cv2.IMREAD_COLOR), 0))
@@ -332,7 +334,7 @@ def import_series(name):
         # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial13.png", cv2.IMREAD_COLOR), -11))
         # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial14.png", cv2.IMREAD_COLOR)))
         # sdr_series.append(sdrImage(cv2.imread("opencvhdr/memorial15.png", cv2.IMREAD_COLOR)))
-    elif name == "own_monster":
+    elif name == "own_monster": # Photos were captured by us!
         sdr_series.append(sdrImage(cv2.imread("own/monster (1).JPG", cv2.IMREAD_COLOR), -6))
         sdr_series.append(sdrImage(cv2.imread("own/monster (2).JPG", cv2.IMREAD_COLOR), -5))
         sdr_series.append(sdrImage(cv2.imread("own/monster (3).JPG", cv2.IMREAD_COLOR), -4))
@@ -342,7 +344,7 @@ def import_series(name):
         sdr_series.append(sdrImage(cv2.imread("own/monster (7).JPG", cv2.IMREAD_COLOR), 0))
         sdr_series.append(sdrImage(cv2.imread("own/monster (8).JPG", cv2.IMREAD_COLOR), 1))
         sdr_series.append(sdrImage(cv2.imread("own/monster (9).JPG", cv2.IMREAD_COLOR), 2))
-    elif name == "own_monster_mini":
+    elif name == "own_monster_mini": # Photos were captured by us!
         # sdr_series.append(sdrImage(cv2.imread("own/mini/monster (1).JPG", cv2.IMREAD_COLOR), -6))
         # sdr_series.append(sdrImage(cv2.imread("own/mini/monster (2).JPG", cv2.IMREAD_COLOR), -5))
         # sdr_series.append(sdrImage(cv2.imread("own/mini/monster (3).JPG", cv2.IMREAD_COLOR), -4))

@@ -47,10 +47,13 @@ def sdr_series_to_hdr(sdr_series):
 # parliament for test set of a parliament and water
 # parliament2 for a (digitally) displaced test set
 # opencv_test_set for the image set used for OpenCVHDR
-# own1 for a street photo series that we a made ourselves
-# own2 for a photo series of a statue that we made ourselves
-sdr_series = import_series("own_monster_mini")
+# Our own sets: own_monster, own_monster_mini, own_street, own_street, own_street_moved, own_street_moved_enhanced,
+# own_statue, own_street_moved_mini
+sdr_series = import_series("own_street")
 # Starts the HDR imaging process
+# The process will output the relative exposure of the reference image for identification
+# as well as the displacements of the other images. After that, it might take some time before
+# the window shows the trinarized reference image. At this point, the algorithm will have generated a test.exr file.
 sdr_series_to_hdr(sdr_series)
 
 

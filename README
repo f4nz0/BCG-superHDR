@@ -1,1 +1,9 @@
-TEST
+Projekt für Modul 'Bildbasierte Computergrafik' an der TH Köln im Master Medieninformatik.
+Implementation/Nachbau des SuperHDR-Algorithmus (https://ieeexplore.ieee.org/document/6976844)
+
+Nutzung: SuperHDR_2 ausführen. Es werden numpy, opencv und imageio vorausgesetzt.
+(Für imageio muss eine Bibliothek heruntergeladen werden. Details dazu finden sich im Konsolenoutput bei der ersten Ausführung)
+
+
+Habib Mokni
+Fabio Schlößer Vila
