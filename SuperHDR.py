@@ -6,218 +6,226 @@ import numpy as np
 sat_threshold = 200
 blk_threshold = 60
 
-class sdrImage:
-    def __init__(self, im):
-        self.image = im
-        self.image = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
-        self.trinarized = np.zeros((im.shape[0], im.shape[1]), dtype=np.uint8)
-        self.binarized = np.zeros((im.shape[0], im.shape[1]), dtype=np.uint8)
-        self.appr_count = 0
-        self.sat_count = 0
-        self.blk_count = 0
-        self.classification = "none"
-        self.brighter = None
-        self.darker = None
-        self.displacement = (0, 0)
-        self.sat_threshold = 255
-        self.blk_threshold = 0
-
-    def __str__(self):
-        out = "Appropriate: " + str(self.appr_count) + "\n"
-        out += "Blacked out: " + str(self.blk_count) + "\n"
-        out += "Saturated: " + str(self.sat_count) + "\n"
-        return out
 
 
-def trinarize(sdrimage):
-    image = sdrimage.image
-    for x in range(0, image.shape[0]):
-        for y in range(0, image.shape[1]):
-            if image[x][y][2] > sat_threshold:
-                sdrimage.trinarized[x][y] = 2
-                sdrimage.sat_count += 1
-            elif image[x][y][2] < blk_threshold:
-                sdrimage.trinarized[x][y] = 0
-                sdrimage.blk_count += 1
-            else:
-                sdrimage.trinarized[x][y] = 1
-                sdrimage.appr_count += 1
 
-
-def cvt_trinarized2grayscale(tri):
-    grayimg = np.zeros(tri.shape, dtype=np.uint8)
-    for x in range(0, tri.shape[0]):
-        for y in range(0, tri.shape[1]):
-            if tri[x][y] == 0:
-                grayimg[x][y] = 0
-            elif tri[x][y] == 2:
-                grayimg[x][y] = 255
-            else:
-                grayimg[x][y] = 200
-    return grayimg
-
-
-def binarize(sdrimage):
-    tri = sdrimage.trinarized
-    bi = sdrimage.binarized
-    classification = sdrimage.classification
-    for x in range(0, tri.shape[0]):
-        for y in range(0, tri.shape[1]):
-            if classification == "ref":
-                if tri[x][y] == 1:
-                    bi[x][y] = 1
-            elif classification == "blackedout":
-                if tri[x][y] == 0:
-                    bi[x][y] = 1
-            elif classification == "saturated":
-                if tri[x][y] == 2:
-                    bi[x][y] = 1
-
-
-def cvt_binarized2grayscale(bi):
-    grayimg = np.zeros(bi.shape, dtype=np.uint8)
-    for x in range(0, bi.shape[0]):
-        for y in range(0, bi.shape[1]):
-            if bi[x][y] == 0:
-                grayimg[x][y] = 70
-            else:
-                grayimg[x][y] = 180
-    return grayimg
-
-
-def sort_into_chain(ref, sdrimage):
-    if sdrimage.blk_count > ref.blk_count:
-        sdrimage.classification = "blackedout"
-        if ref.darker is None:
-            ref.darker = sdrimage
-            sdrimage.brighter = ref
-        else:
-            darker = ref.darker
-            if darker.blk_count >= sdrimage.blk_count:
-                sdrimage.brighter = ref
-                sdrimage.darker = darker
-                darker.brighter = sdrimage
-                ref.darker = sdrimage
-            else:
-                sort_into_chain(darker, sdrimage)
-    elif sdrimage.sat_count > ref.sat_count:
-        sdrimage.classification = "saturated"
-        if ref.brighter is None:
-            ref.brighter = sdrimage
-            sdrimage.darker = ref
-        else:
-            brighter = ref.brighter
-            if brighter.sat_count >= sdrimage.sat_count:
-                sdrimage.darker = ref
-                sdrimage.brighter = brighter
-                brighter.darker = sdrimage
-                ref.brighter = sdrimage
-            else:
-                sort_into_chain(brighter, sdrimage)
-
-
-def convert_sdr2hdr(sdr_series):
-    # CLASSIFIYING INTO EITHER BLACKET OUT, REFERENCE OR SATURATED
-    ex_prepro(sdr_series)
-    ref = ex_classification(sdr_series)
-    hdr = ex_merging(ref)
-    cv2.imshow("reference", cv2.cvtColor(ref.image, cv2.COLOR_HSV2BGR))
-    cv2.imshow("hdr", cv2.cvtColor(hdr, cv2.COLOR_HSV2BGR))
-
-    # for i in range(0, len(sdr_series)):
-    #     cv2.imshow("img" + str(i), cvt_trinarized2grayscale(sdr_series[i].trinarized))
-    #     if ref == sdr_series[i]:
-    #         print("FOUND", i)
-    #     print(i, sdr_series[i].appr_count)
-
-
-def ex_prepro(sdr_series):
-    zmax = 0
-    min_zmax = 255
-    for sdrimage in sdr_series:
-        temp_zmax = np.max(sdrimage.image[:, :, 1])
-        print(temp_zmax)
-        sdrimage.sat_threshold = 0.9 * temp_zmax
-        if temp_zmax > zmax:
-            zmax = temp_zmax
-        if temp_zmax < min_zmax:
-            min_zmax = temp_zmax
-    max_zmin = 0.9 * min_zmax
-    ratio = max_zmin / zmax
-    for sdrimage in sdr_series:
-        sdrimage.blk_threshold = ratio * sdrimage.sat_threshold
-        print(sdrimage.sat_threshold, sdrimage.blk_threshold)
-
-
-def ex_classification(sdr_series):
-    ref = sdr_series[1]
-    for sdrimage in sdr_series:
-
-        trinarize(sdrimage)
-        if sdrimage.appr_count > ref.appr_count:
-            ref = sdrimage
-    ref.classification = "ref"
-    for sdrimage in sdr_series:
-        sort_into_chain(ref, sdrimage)
-        binarize(sdrimage)
-        print("HELLO")
-    # cv2.imshow("reference tri", cvt_trinarized2grayscale(ref.trinarized))
-    # cv2.imshow("reference bin", cvt_binarized2grayscale(ref.binarized))
-    # cv2.imshow("darker tri", cvt_trinarized2grayscale(ref.darker.trinarized))
-    # cv2.imshow("darker bin", cvt_binarized2grayscale(ref.darker.binarized))
-    # cv2.imshow("brighter tri", cvt_trinarized2grayscale(ref.brighter.trinarized))
-    # cv2.imshow("brighter bin", cvt_binarized2grayscale(ref.brighter.binarized))
-    return ref
-
-
-def ex_merging(ref):
-    hdrimage = np.ones(ref.image.shape, dtype=np.uint8)
-    for x in range(0, ref.image.shape[0]):
-        for y in range(0, ref.image.shape[1]):
-            temp_image = ref
+def merging(ref):
+    hdrimage = ref.image.copy()
+    # hdrimage = np.zeros(ref.image.shape, dtype=np.uint8)
+    for x in range(0, hdrimage.shape[0]):
+        for y in range(0, hdrimage.shape[1]):
+            temp = ref
             found = False
-            # print(x , y)
-            if temp_image.trinarized[x][y] == 2:
+            depth_counter = 0
+            if ref.trinarized[x][y] == 2:
+                # print("replacing", x, y)
                 while not found:
-                    if temp_image.darker is not None:
-                        if temp_image.darker.trinarized[x][y] == 1:
-                            hdrimage[x][y][:] = temp_image.darker.image[x][y][:]
-                            # print("Darker found")
-                            found = True
+                    if temp.darker is not None:
+                        depth_counter += 1
+                        displ = temp.darker.displacement
+                        new_x = x - displ[0]
+                        new_y = y - displ[1]
+                        if temp.darker.image.shape[0] > new_x > 0 and temp.darker.image.shape[1] > new_y > 0:
+                            if temp.darker.trinarized[new_x][new_y] == 1:
+                                hdrimage[x][y][:] = merge_pixels(hdrimage[x][y][:], temp.darker.image[new_x][new_y][:], depth_counter)
+                                found = True
+                                # print("replaced")
+                            else:
+                                hdrimage[x][y][:] = merge_pixels(hdrimage[x][y][:], temp.darker.image[new_x][new_y][:], depth_counter)
+
+                                temp = temp.darker
                         else:
-                            temp_image = temp_image.darker
+                            temp = temp.darker
                     else:
-                        hdrimage[x][y][:] = temp_image.image[x][y][:]
-                        # print("Darker found")
                         found = True
-            elif temp_image.trinarized[x][y] == 0:
+            elif ref.trinarized[x][y] == 0:
                 while not found:
-                    if temp_image.brighter is not None:
-                        if temp_image.brighter.trinarized[x][y] == 1:
-                            hdrimage[x][y][:] = temp_image.brighter.image[x][y][:]
-                            # print("Lighter found")
-                            found = True
+                    if temp.brighter is not None:
+                        depth_counter += 1
+                        displ = temp.brighter.displacement
+                        new_x = x - displ[0]
+                        new_y = y - displ[1]
+                        if temp.brighter.image.shape[0] > new_x > 0 and temp.brighter.image.shape[1] > new_y > 0:
+                            if temp.brighter.trinarized[new_x][new_y] == 1:
+                                hdrimage[x][y][:] = merge_pixels(hdrimage[x][y][:],
+                                                                 temp.brighter.image[new_x][new_y][:],
+                                                                 depth_counter)
+                                found = True
+                                # print("replaced")
+                            else:
+                                hdrimage[x][y][:] = merge_pixels(hdrimage[x][y][:],temp.brighter.image[new_x][new_y][:],depth_counter)
+                                temp = temp.brighter
                         else:
-                            temp_image = temp_image.brighter
+                            temp = temp.brighter
                     else:
-                        hdrimage[x][y][:] = temp_image.image[x][y][:]
-                        # print("Lighter found")
                         found = True
-            else:
-                hdrimage[x][y][:] = temp_image.image[x][y][:]
-    print("DONE")
+    # hdrimage = cv2.blur(hdrimage, (2, 2))
+    # hdrimage = replace(hdrimage, ref)
+    # hdrimage = np.ndarray.astype(hdrimage, dtype=np.uint8)
     return hdrimage
 
-    # print("SORTED")
-    # out = str(ref)
-    # darker = ref.darker
-    # while darker is not None:
-    #     out = str(darker) + out
-    #     darker = darker.darker
-    # brighter = ref.brighter
-    # while brighter is not None:
-    #     out += str(brighter)
-    #     brighter = brighter.brighter
-    # print(out)
+
+def merge_pixels(pixel, new_pixel, weight):
+    return (pixel * (1 - (1 / weight))) + (new_pixel * (1/weight))
+
+def merging(ref):
+    hdrimage = ref.image.copy()
+    for x in range(0, hdrimage.shape[0]):
+        for y in range(0, hdrimage.shape[1]):
+            temp = ref
+            found = False
+            depth_counter = 0
+            if ref.trinarized[x][y] == 2:
+                # print("replacing", x, y)
+                while not found:
+                    if temp.darker is not None:
+                        depth_counter += 1
+                        displ = temp.darker.displacement
+                        new_x = x - displ[0]
+                        new_y = y - displ[1]
+                        if temp.darker.image.shape[0] > new_x > 0 and temp.darker.image.shape[1] > new_y > 0:
+                            if temp.darker.trinarized[new_x][new_y] == 1:
+                                hdrimage[x][y][:] = get_pixel_value(temp.darker.image[x][y][:], 2, temp.darker.relative_exp, ref.relative_exp)
+                                found = True
+                                # print("replaced")
+                            else:
+                                hdrimage[x][y][:] = get_pixel_value(temp.darker.image[x][y][:], 2, temp.darker.relative_exp, ref.relative_exp)
+
+                                temp = temp.darker
+                        else:
+                            temp = temp.darker
+                    else:
+                        found = True
+            elif ref.trinarized[x][y] == 0:
+                while not found:
+                    if temp.brighter is not None:
+                        depth_counter += 1
+                        displ = temp.brighter.displacement
+                        new_x = x - displ[0]
+                        new_y = y - displ[1]
+                        if temp.brighter.image.shape[0] > new_x > 0 and temp.brighter.image.shape[1] > new_y > 0:
+                            if temp.brighter.trinarized[new_x][new_y] == 1:
+                                hdrimage[x][y][:] = get_pixel_value(temp.brighter.image[x][y][:], 0, temp.brighter.relative_exp, ref.relative_exp)
+                                found = True
+                                # print("replaced")
+                            else:
+                                hdrimage[x][y][:] = get_pixel_value(temp.brighter.image[x][y][:], 0, temp.brighter.relative_exp, ref.relative_exp)
+                                temp = temp.brighter
+                        else:
+                            temp = temp.brighter
+                    else:
+                        found = True
+    return hdrimage
 
 
+def get_pixel_value(pixel, tri, exposure_image, exposure_ref):
+    val_at_exp = (1/(1+np.e ** (-exposure_image * 0.65))) * 255
+    val_at_ref = (1/(1+np.e ** (-exposure_ref * 0.65))) * 255
+
+    if tri == 2:
+        diff = np.absolute(val_at_ref - val_at_exp)
+        # print(diff)
+        pixel_lum = pixel[1] + diff
+    if tri == 0:
+        diff = np.absolute(val_at_exp - val_at_ref)
+        # print(diff)
+        pixel_lum = pixel[1] - diff
+
+    # pixel_lum = pixel[1] + diff
+    if pixel_lum > 255:
+        pixel_lum = 255
+    elif pixel_lum < 0:
+        pixel_lum = 0
+    new_pixel = [pixel[0], pixel_lum, pixel[2]]
+    return new_pixel
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+def merging(ref):
+    hdrimage = ref.image.copy() / 255
+    for x in range(0, hdrimage.shape[0]):
+        for y in range(0, hdrimage.shape[1]):
+            temp = ref
+            found = False
+            depth_counter = 0
+            if ref.trinarized[x][y] == 2:
+                # print("replacing", x, y)
+                while not found:
+                    if temp.darker is not None:
+                        depth_counter += 1
+                        displ = temp.darker.displacement
+                        new_x = x - displ[0]
+                        new_y = y - displ[1]
+                        if temp.darker.image.shape[0] > new_x > 0 and temp.darker.image.shape[1] > new_y > 0:
+                            if temp.darker.trinarized[new_x][new_y] == 1:
+                                hdrimage[x][y][:] = get_pixel_value(temp.darker.image[x][y][:], 2, temp.darker.relative_exp, ref.relative_exp)
+                                found = True
+                                # print("replaced")
+                            else:
+                                hdrimage[x][y][:] = get_pixel_value(temp.darker.image[x][y][:], 2, temp.darker.relative_exp, ref.relative_exp)
+
+                                temp = temp.darker
+                        else:
+                            temp = temp.darker
+                    else:
+                        found = True
+            elif ref.trinarized[x][y] == 0:
+                while not found:
+                    if temp.brighter is not None:
+                        depth_counter += 1
+                        displ = temp.brighter.displacement
+                        new_x = x - displ[0]
+                        new_y = y - displ[1]
+                        if temp.brighter.image.shape[0] > new_x > 0 and temp.brighter.image.shape[1] > new_y > 0:
+                            if temp.brighter.trinarized[new_x][new_y] == 1:
+                                hdrimage[x][y][:] = get_pixel_value(temp.brighter.image[x][y][:], 0, temp.brighter.relative_exp, ref.relative_exp)
+                                found = True
+                                # print("replaced")
+                            else:
+                                hdrimage[x][y][:] = get_pixel_value(temp.brighter.image[x][y][:], 0, temp.brighter.relative_exp, ref.relative_exp)
+                                temp = temp.brighter
+                        else:
+                            temp = temp.brighter
+                    else:
+                        found = True
+    hdrimage = np.ndarray.astype(hdrimage, np.float32)
+    # hdrimage = cv2.cvtColor(hdrimage, cv2.COLOR_HLS2BGR)
+    return hdrimage
+
+
+def get_pixel_value(pixel, tri, exposure_image, exposure_ref):
+    pixel = pixel / 255
+    val_at_exp = (1/(1+np.e ** (-exposure_image)))
+    val_at_ref = (1/(1+np.e ** (-exposure_ref)))
+    if tri == 2:
+        diff = np.absolute(val_at_ref - val_at_exp)
+        pixel_lum = pixel[1] + diff
+    if tri == 0:
+        diff = np.absolute(val_at_exp - val_at_ref)
+        pixel_lum = pixel[1] - diff
+    new_pixel = [pixel[0], pixel_lum, pixel[2]]
